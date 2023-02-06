@@ -1,0 +1,46 @@
+version: "3.8"
+
+services:
+  api:
+    container_name: "eclipse-api"
+    image: 312136753954.dkr.ecr.ap-south-1.amazonaws.com/eclipse
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      PG_HOST: ${PG_HOST}
+      PG_USERNAME: ${PG_USERNAME}
+      PG_PASSWORD: ${PG_PASSWORD}
+      PG_PORT: ${PG_PORT}
+    restart: always
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ap-south-1
+        awslogs-group: eclipseloggroup
+    ports:
+      - 3000:3000
+    networks:
+      - eclipse_net
+
+networks:
+  eclipse_net:
+    driver: bridge
+
+x-aws-cloudformation:
+  Resources:
+    WebappTCP443Listener:
+      Type: "AWS::ElasticLoadBalancingV2::Listener"
+      Properties:
+        LoadBalancerArn:
+          Ref: LoadBalancer
+        DefaultActions:
+          - ForwardConfig:
+              TargetGroups:
+                - TargetGroupArn:
+                    Ref: ApiTCP3000TargetGroup
+            Type: forward
+        Certificates:
+          - CertificateArn: "arn:aws:acm:ap-south-1:312136753954:certificate/12349460-184b-4e7d-92fd-483d60cd7c9c"
+        Protocol: TLS
+        Port: 443
